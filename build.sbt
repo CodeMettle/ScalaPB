@@ -1,27 +1,44 @@
 import ReleaseTransformations._
 
-scalaVersion in ThisBuild := "2.11.8"
+scalaVersion in ThisBuild := "2.11.7"
 
-crossScalaVersions in ThisBuild := Seq("2.10.6", "2.11.8", "2.12.1")
+crossScalaVersions in ThisBuild := Seq("2.10.5", "2.11.7")
 
 scalacOptions in ThisBuild ++= {
   CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, v)) if v <= 11 => List("-target:jvm-1.7")
+    case Some((2, v)) if v <= 11 => List("-target:jvm-1.6")
     case _ => Nil
   }
 }
 
 javacOptions in ThisBuild ++= {
   CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, v)) if v <= 11 => List("-target", "7", "-source", "7")
+    case Some((2, v)) if v <= 11 => List("-target", "6", "-source", "6")
     case _ => Nil
   }
 }
 
 organization in ThisBuild := "com.trueaccord.scalapb"
 
-resolvers in ThisBuild +=
-  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+resolvers in ThisBuild ++= Seq(
+  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+  "cm" at "http://maven.codemettle.com/repository/internal",
+  "cm/snaps" at "http://maven.codemettle.com/repository/snapshots"
+)
+
+publishMavenStyle in ThisBuild := true
+
+credentials in ThisBuild += {
+  def file = "credentials-" + (if (isSnapshot.value) "snapshots" else "internal")
+
+  Credentials(Path.userHome / ".m2" / file)
+}
+
+publishTo in ThisBuild := {
+  def path = "/repository/" + (if (isSnapshot.value) "snapshots" else "internal")
+
+  Some("CodeMettle Maven" at s"http://maven.codemettle.com$path")
+}
 
 releaseCrossBuild := true
 
@@ -55,7 +72,7 @@ lazy val runtime = crossProject.crossType(CrossType.Full).in(file("scalapb-runti
   .settings(
     name := "scalapb-runtime",
     libraryDependencies ++= Seq(
-      "com.trueaccord.lenses" %%% "lenses" % "0.4.9",
+      "com.trueaccord.lenses" %%% "lenses" % "0.4.9-JAVA6",
       "com.lihaoyi" %%% "fastparse" % "0.4.2",
       "com.lihaoyi" %%% "utest" % "0.4.5" % "test",
       "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
@@ -113,7 +130,7 @@ lazy val compilerPlugin = project.in(file("compiler-plugin"))
       Seq(file)
     }.taskValue,
     libraryDependencies ++= Seq(
-      "com.trueaccord.scalapb" %% "protoc-bridge" % "0.2.5",
+      "com.trueaccord.scalapb" %% "protoc-bridge" % "0.2.5-JAVA6",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
       ))
 
@@ -171,7 +188,7 @@ lazy val proptest = project.in(file("proptest"))
         "com.github.os72" % "protoc-jar" % "3.1.0.1",
         "com.google.protobuf" % "protobuf-java" % protobufVersion,
         "io.grpc" % "grpc-netty" % grpcVersion % "test",
-        "com.trueaccord.lenses" %% "lenses" % "0.4.9",
+        "com.trueaccord.lenses" %% "lenses" % "0.4.9-JAVA6",
         "com.trueaccord.scalapb" %% "scalapb-json4s" % "0.1.5",
         "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
         "org.scalatest" %% "scalatest" % "3.0.1" % "test"
@@ -188,7 +205,7 @@ lazy val proptest = project.in(file("proptest"))
 
 lazy val ShortTest = config("short") extend(Test)
 
-val protobufVersion = "3.1.0"
+lazy val protobufVersion = "3.1.0"
 
 // For e2e test
 val sbtPluginVersion = "0.99.3"
