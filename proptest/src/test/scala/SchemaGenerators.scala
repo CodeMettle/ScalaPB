@@ -1,6 +1,5 @@
 import java.io.{File, PrintWriter}
 import java.net.{URL, URLClassLoader}
-import java.nio.file.Files
 import javax.tools.ToolProvider
 
 import com.google.protobuf.Message.Builder
@@ -78,7 +77,12 @@ object SchemaGenerators {
   }
 
   def writeFileSet(rootNode: RootNode) = {
-    val tmpDir = Files.createTempDirectory(s"set_").toFile.getAbsoluteFile
+    val tmpDir = {
+      val f = File.createTempFile("set_", "")
+      f.delete()
+      f.mkdir()
+      f.getAbsoluteFile
+    }
     rootNode.files.foreach {
       fileNode =>
         val file = new File(tmpDir, fileNode.baseFileName + ".proto")

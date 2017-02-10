@@ -1,6 +1,5 @@
 import java.io.{File, PrintWriter}
 import java.nio.charset.Charset
-import java.nio.file.{Files, Paths}
 
 import SchemaGenerators.CompiledSchema
 import com.google.protobuf
@@ -78,7 +77,7 @@ class GeneratedCodeSpec extends PropSpec with GeneratorDrivenPropertyChecks with
                 companion.fromAscii(scalaUnicodeAscii) should be(scalaProto)
               } catch {
                 case e: Exception =>
-                  Files.write(Paths.get(s"/tmp/unicode.txt"), scalaUnicodeAscii.getBytes(Charset.forName("UTF-8")))
+                  //Files.write(Paths.get(s"/tmp/unicode.txt"), scalaUnicodeAscii.getBytes(Charset.forName("UTF-8")))
                   throw e
               }
 

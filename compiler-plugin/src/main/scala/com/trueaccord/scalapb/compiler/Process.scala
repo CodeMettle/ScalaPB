@@ -1,9 +1,7 @@
 package com.trueaccord.scalapb.compiler
 
-import java.io.{InputStream, StringWriter, PrintWriter}
+import java.io._
 import java.net.ServerSocket
-import java.nio.file.attribute.PosixFilePermission
-import java.nio.file.{Files, Path}
 
 import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.{CodeGeneratorResponse, CodeGeneratorRequest}
@@ -55,11 +53,11 @@ class PosixProtocDriver extends ProtocDriver {
     val outputPipe = createPipe()
     val sh = createShellScript(inputPipe, outputPipe)
     Future {
-      val fsin = Files.newInputStream(inputPipe)
+      val fsin = new FileInputStream(inputPipe)
       val response = Process.runWithInputStream(fsin)
       fsin.close()
 
-      val fsout = Files.newOutputStream(outputPipe)
+      val fsout = new FileOutputStream(outputPipe)
       fsout.write(response.toByteArray)
       fsout.close()
     }
@@ -68,29 +66,27 @@ class PosixProtocDriver extends ProtocDriver {
       val args = Seq(s"--plugin=protoc-gen-scala=$sh") ++ params
       runner(args)
     } finally {
-      Files.delete(inputPipe)
-      Files.delete(outputPipe)
-      Files.delete(sh)
+      inputPipe.delete()
+      outputPipe.delete()
+      sh.delete()
     }
   }
 
-  private def createPipe(): Path = {
-    val pipeName = Files.createTempFile("protopipe-", ".pipe")
-    Files.delete(pipeName)
-    Seq("mkfifo", "-m", "600", pipeName.toAbsolutePath.toString).!!
+  private def createPipe(): File = {
+    val pipeName = File.createTempFile("protopipe-", ".pipe")
+    pipeName.delete()
+    Seq("mkfifo", "-m", "600", pipeName.getAbsolutePath).!!
     pipeName
   }
 
-  private def createShellScript(inputPipe: Path, outputPipe: Path): Path = {
+  private def createShellScript(inputPipe: File, outputPipe: File): File = {
     val scriptName = Process.createTempFile("",
       s"""|#!/usr/bin/env sh
           |set -e
           |cat /dev/stdin > "$inputPipe"
           |cat "$outputPipe"
       """.stripMargin)
-    Files.setPosixFilePermissions(scriptName, Set(
-      PosixFilePermission.OWNER_EXECUTE,
-      PosixFilePermission.OWNER_READ).asJava)
+    Seq("chmod", "+x", scriptName.getAbsolutePath).!!
     scriptName
   }
 }
@@ -116,12 +112,12 @@ class WindowsProtocDriver(pythonExecutable: String) extends ProtocDriver {
       val args = Seq(s"--plugin=protoc-gen-scala=$batFile") ++ params
       runner(args)
     } finally {
-      Files.delete(batFile)
-      Files.delete(pyFile)
+      batFile.delete()
+      pyFile.delete()
     }
   }
 
-  private def createWindowsScripts(port: Int): (Path, Path) = {
+  private def createWindowsScripts(port: Int): (File, File) = {
     val pythonScript = Process.createTempFile(".py",
       s"""|import sys, socket
          |
@@ -170,9 +166,9 @@ object Process {
     }.get
   }
 
-  def createTempFile(extension: String, content: String): Path = {
-    val fileName = Files.createTempFile("scalapbgen", extension)
-    val os = Files.newOutputStream(fileName)
+  def createTempFile(extension: String, content: String): File = {
+    val fileName = File.createTempFile("scalapbgen", extension)
+    val os = new FileOutputStream(fileName)
     os.write(content.getBytes("UTF-8"))
     os.close()
     fileName
